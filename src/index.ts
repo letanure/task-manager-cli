@@ -24,8 +24,12 @@ program
     'Task priority (high, medium, low)',
     'medium'
   )
-  .action((task: string, options: { priority: Priority }) => {
-    addTask(storage, task, options.priority);
+  .option(
+    '-d, --due <date>',
+    'Due date (today, tomorrow, 3d, 2024-12-25, etc.)'
+  )
+  .action((task: string, options: { priority: Priority; due?: string }) => {
+    addTask(storage, task, options.priority, options.due);
   });
 
 program
@@ -34,6 +38,7 @@ program
   .option('-c, --completed', 'Show only completed tasks')
   .option('-p, --pending', 'Show only pending tasks')
   .option('--priority <priority>', 'Filter by priority (high, medium, low)')
+  .option('--overdue', 'Show only overdue tasks')
   .action((options: ListOptions) => {
     listTasks(storage, options);
   });

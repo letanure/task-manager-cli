@@ -1,6 +1,7 @@
 import * as clack from '@clack/prompts';
 import chalk from 'chalk';
 import type { Priority, Task, TaskStorage } from '../types';
+import { formatDate, isOverdue } from '../utils/dateUtils';
 import { addTask } from './add';
 import { clearAllTasks } from './clear';
 import { completeTask } from './complete';
@@ -26,6 +27,7 @@ const FILTER_OPTIONS: ActionChoice[] = [
   { value: 'all', label: 'All tasks' },
   { value: 'pending', label: 'Pending tasks only' },
   { value: 'completed', label: 'Completed tasks only' },
+  { value: 'overdue', label: 'Overdue tasks only' },
   { value: 'high', label: 'High priority tasks only' },
   { value: 'medium', label: 'Medium priority tasks only' },
   { value: 'low', label: 'Low priority tasks only' },
@@ -35,6 +37,15 @@ const PRIORITY_OPTIONS: ActionChoice[] = [
   { value: 'high', label: '🔴 High', hint: 'Urgent and important' },
   { value: 'medium', label: '🟡 Medium', hint: 'Standard priority' },
   { value: 'low', label: '🟢 Low', hint: 'Nice to have' },
+];
+
+const DUE_DATE_OPTIONS: ActionChoice[] = [
+  { value: 'none', label: 'No due date' },
+  { value: 'today', label: '📅 Today' },
+  { value: 'tomorrow', label: '📅 Tomorrow' },
+  { value: '3', label: '📅 In 3 days' },
+  { value: '7', label: '📅 In 1 week' },
+  { value: 'custom', label: '📅 Custom date' },
 ];
 
 function getPriorityIcon(priority: Priority): string {
@@ -51,11 +62,30 @@ function getPriorityIcon(priority: Priority): string {
 }
 
 function getTaskChoices(tasks: Task[]): ActionChoice[] {
-  return tasks.map((task) => ({
-    value: task.id,
-    label: `${getPriorityIcon(task.priority)} ${task.completed ? chalk.strikethrough(task.task) : task.task}`,
-    hint: `${task.priority.toUpperCase()} - ID: ${task.id}`,
-  }));
+  return tasks.map((task) => {
+    let taskLabel = `${getPriorityIcon(task.priority)} ${task.completed ? chalk.strikethrough(task.task) : task.task}`;
+
+    // Add overdue indicator for overdue tasks
+    if (task.dueDate && !task.completed && isOverdue(task.dueDate)) {
+      taskLabel = chalk.red(taskLabel);
+    }
+
+    let hint = `${task.priority.toUpperCase()}`;
+    if (task.dueDate) {
+      const formatted = formatDate(task.dueDate);
+      const overdue = !task.completed && isOverdue(task.dueDate);
+      hint += overdue
+        ? ` - Due: ${formatted} (OVERDUE)`
+        : ` - Due: ${formatted}`;
+    }
+    hint += ` - ID: ${task.id}`;
+
+    return {
+      value: task.id,
+      label: taskLabel,
+      hint,
+    };
+  });
 }
 
 async function handleListTasks(storage: TaskStorage): Promise<void> {
@@ -72,9 +102,11 @@ async function handleListTasks(storage: TaskStorage): Promise<void> {
     completed?: boolean;
     pending?: boolean;
     priority?: Priority;
+    overdue?: boolean;
   } = {
     ...(filterChoice === 'completed' && { completed: true }),
     ...(filterChoice === 'pending' && { pending: true }),
+    ...(filterChoice === 'overdue' && { overdue: true }),
     ...(['high', 'medium', 'low'].includes(filterChoice) && {
       priority: filterChoice as Priority,
     }),
@@ -108,7 +140,32 @@ async function handleAddTask(storage: TaskStorage): Promise<void> {
     return;
   }
 
-  addTask(storage, taskDescription, priority as Priority);
+  const dueDateChoice = await clack.select({
+    message: 'Set due date:',
+    options: DUE_DATE_OPTIONS,
+  });
+
+  if (clack.isCancel(dueDateChoice)) {
+    return;
+  }
+
+  let dueDate: string | undefined;
+  if (dueDateChoice === 'custom') {
+    const customDate = await clack.text({
+      message: 'Enter due date (today, tomorrow, 3d, 2024-12-25, etc.):',
+      placeholder: 'e.g., tomorrow, 3d, 2024-12-25',
+    });
+
+    if (clack.isCancel(customDate)) {
+      return;
+    }
+
+    dueDate = customDate;
+  } else if (dueDateChoice !== 'none') {
+    dueDate = dueDateChoice;
+  }
+
+  addTask(storage, taskDescription, priority as Priority, dueDate);
 }
 
 async function handleCompleteTask(storage: TaskStorage): Promise<void> {

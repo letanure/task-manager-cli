@@ -7,12 +7,14 @@ export interface Task {
   priority: Priority;
   createdAt: string;
   completedAt?: string;
+  dueDate?: string;
 }
 
 export interface ListOptions {
   completed?: boolean;
   pending?: boolean;
   priority?: Priority;
+  overdue?: boolean;
 }
 
 export interface TaskStorage {
