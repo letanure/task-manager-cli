@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import { Command } from 'commander';
 import { addTask } from './commands/add';
 import { clearAllTasks } from './commands/clear';
@@ -8,7 +6,7 @@ import { runInteractiveMode } from './commands/interactive';
 import { listTasks } from './commands/list';
 import { removeTask } from './commands/remove';
 import { createFileTaskStorage } from './storage/file';
-import type { ListOptions } from './types';
+import type { ListOptions, Priority } from './types';
 
 const program = new Command();
 const storage = createFileTaskStorage();
@@ -21,8 +19,13 @@ program
 program
   .command('add <task>')
   .description('Add a new task')
-  .action((task: string) => {
-    addTask(storage, task);
+  .option(
+    '-p, --priority <priority>',
+    'Task priority (high, medium, low)',
+    'medium'
+  )
+  .action((task: string, options: { priority: Priority }) => {
+    addTask(storage, task, options.priority);
   });
 
 program
@@ -30,6 +33,7 @@ program
   .description('List all tasks')
   .option('-c, --completed', 'Show only completed tasks')
   .option('-p, --pending', 'Show only pending tasks')
+  .option('--priority <priority>', 'Filter by priority (high, medium, low)')
   .action((options: ListOptions) => {
     listTasks(storage, options);
   });

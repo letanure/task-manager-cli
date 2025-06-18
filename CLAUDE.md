@@ -80,6 +80,14 @@ npm run dev clear
 3. Link globally: `npm link`
 4. Use CLI anywhere: `task-manager <command>`
 
+### Alternative Running Methods
+
+No permission issues with the current setup:
+
+1. **Global install**: `npm link` (works without chmod)
+2. **Dev mode**: `npm run dev <command>`
+3. **Direct execution**: `node dist/index.js <command>`
+
 ## Development Workflow
 
 1. Edit files in `src/`

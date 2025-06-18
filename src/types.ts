@@ -1,7 +1,10 @@
+export type Priority = 'high' | 'medium' | 'low';
+
 export interface Task {
   id: string;
   task: string;
   completed: boolean;
+  priority: Priority;
   createdAt: string;
   completedAt?: string;
 }
@@ -9,6 +12,7 @@ export interface Task {
 export interface ListOptions {
   completed?: boolean;
   pending?: boolean;
+  priority?: Priority;
 }
 
 export interface TaskStorage {

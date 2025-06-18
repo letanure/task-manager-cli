@@ -1,6 +1,6 @@
 import * as clack from '@clack/prompts';
 import chalk from 'chalk';
-import type { Task, TaskStorage } from '../types';
+import type { Priority, Task, TaskStorage } from '../types';
 import { addTask } from './add';
 import { clearAllTasks } from './clear';
 import { completeTask } from './complete';
@@ -26,13 +26,35 @@ const FILTER_OPTIONS: ActionChoice[] = [
   { value: 'all', label: 'All tasks' },
   { value: 'pending', label: 'Pending tasks only' },
   { value: 'completed', label: 'Completed tasks only' },
+  { value: 'high', label: 'High priority tasks only' },
+  { value: 'medium', label: 'Medium priority tasks only' },
+  { value: 'low', label: 'Low priority tasks only' },
 ];
+
+const PRIORITY_OPTIONS: ActionChoice[] = [
+  { value: 'high', label: '🔴 High', hint: 'Urgent and important' },
+  { value: 'medium', label: '🟡 Medium', hint: 'Standard priority' },
+  { value: 'low', label: '🟢 Low', hint: 'Nice to have' },
+];
+
+function getPriorityIcon(priority: Priority): string {
+  switch (priority) {
+    case 'high':
+      return '🔴';
+    case 'medium':
+      return '🟡';
+    case 'low':
+      return '🟢';
+    default:
+      return '⚪';
+  }
+}
 
 function getTaskChoices(tasks: Task[]): ActionChoice[] {
   return tasks.map((task) => ({
     value: task.id,
-    label: task.completed ? chalk.strikethrough(task.task) : task.task,
-    hint: `ID: ${task.id}`,
+    label: `${getPriorityIcon(task.priority)} ${task.completed ? chalk.strikethrough(task.task) : task.task}`,
+    hint: `${task.priority.toUpperCase()} - ID: ${task.id}`,
   }));
 }
 
@@ -46,9 +68,16 @@ async function handleListTasks(storage: TaskStorage): Promise<void> {
     return;
   }
 
-  const options = {
-    completed: filterChoice === 'completed',
-    pending: filterChoice === 'pending',
+  const options: {
+    completed?: boolean;
+    pending?: boolean;
+    priority?: Priority;
+  } = {
+    ...(filterChoice === 'completed' && { completed: true }),
+    ...(filterChoice === 'pending' && { pending: true }),
+    ...(['high', 'medium', 'low'].includes(filterChoice) && {
+      priority: filterChoice as Priority,
+    }),
   };
 
   listTasks(storage, options);
@@ -70,7 +99,16 @@ async function handleAddTask(storage: TaskStorage): Promise<void> {
     return;
   }
 
-  addTask(storage, taskDescription);
+  const priority = await clack.select({
+    message: 'Select task priority:',
+    options: PRIORITY_OPTIONS,
+  });
+
+  if (clack.isCancel(priority)) {
+    return;
+  }
+
+  addTask(storage, taskDescription, priority as Priority);
 }
 
 async function handleCompleteTask(storage: TaskStorage): Promise<void> {
