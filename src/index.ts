@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { addTask } from './commands/add';
 import { clearAllTasks } from './commands/clear';
 import { completeTask } from './commands/complete';
+import { runInteractiveMode } from './commands/interactive';
 import { listTasks } from './commands/list';
 import { removeTask } from './commands/remove';
 import { createFileTaskStorage } from './storage/file';
@@ -54,4 +55,17 @@ program
     clearAllTasks(storage);
   });
 
-program.parse();
+program
+  .command('interactive')
+  .alias('i')
+  .description('Start interactive mode')
+  .action(async () => {
+    await runInteractiveMode(storage);
+  });
+
+// Default to interactive mode if no command provided
+if (process.argv.length === 2) {
+  runInteractiveMode(storage);
+} else {
+  program.parse();
+}
