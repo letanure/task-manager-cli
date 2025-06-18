@@ -7,6 +7,7 @@ import { clearAllTasks } from './clear';
 import { completeTask } from './complete';
 import { listTasks } from './list';
 import { removeTask } from './remove';
+import { searchTasks } from './search';
 
 interface ActionChoice {
   value: string;
@@ -16,6 +17,7 @@ interface ActionChoice {
 
 const ACTIONS: ActionChoice[] = [
   { value: 'list', label: 'List tasks', hint: 'Show all tasks' },
+  { value: 'search', label: 'Search tasks', hint: 'Find tasks by text' },
   { value: 'add', label: 'Add task', hint: 'Create a new task' },
   { value: 'complete', label: 'Complete task', hint: 'Mark task as done' },
   { value: 'remove', label: 'Remove task', hint: 'Delete a task' },
@@ -113,6 +115,51 @@ async function handleListTasks(storage: TaskStorage): Promise<void> {
   };
 
   listTasks(storage, options);
+}
+
+async function handleSearchTasks(storage: TaskStorage): Promise<void> {
+  const searchTerm = await clack.text({
+    message: 'Enter search term:',
+    placeholder: 'e.g., groceries, meeting, etc.',
+    validate: (value) => {
+      if (!value.trim()) {
+        return 'Search term cannot be empty';
+      }
+      return undefined;
+    },
+  });
+
+  if (clack.isCancel(searchTerm)) {
+    return;
+  }
+
+  const filterChoice = await clack.select({
+    message: 'Apply additional filters?',
+    options: [
+      { value: 'none', label: 'No additional filters' },
+      ...FILTER_OPTIONS.slice(1), // Skip 'all' option
+    ],
+  });
+
+  if (clack.isCancel(filterChoice)) {
+    return;
+  }
+
+  const options: {
+    completed?: boolean;
+    pending?: boolean;
+    priority?: Priority;
+    overdue?: boolean;
+  } = {
+    ...(filterChoice === 'completed' && { completed: true }),
+    ...(filterChoice === 'pending' && { pending: true }),
+    ...(filterChoice === 'overdue' && { overdue: true }),
+    ...(['high', 'medium', 'low'].includes(filterChoice) && {
+      priority: filterChoice as Priority,
+    }),
+  };
+
+  searchTasks(storage, searchTerm, options);
 }
 
 async function handleAddTask(storage: TaskStorage): Promise<void> {
@@ -240,6 +287,9 @@ export async function runInteractiveMode(storage: TaskStorage): Promise<void> {
     switch (action) {
       case 'list':
         await handleListTasks(storage);
+        break;
+      case 'search':
+        await handleSearchTasks(storage);
         break;
       case 'add':
         await handleAddTask(storage);

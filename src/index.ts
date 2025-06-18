@@ -5,6 +5,7 @@ import { completeTask } from './commands/complete';
 import { runInteractiveMode } from './commands/interactive';
 import { listTasks } from './commands/list';
 import { removeTask } from './commands/remove';
+import { searchTasks } from './commands/search';
 import { createFileTaskStorage } from './storage/file';
 import type { ListOptions, Priority } from './types';
 
@@ -41,6 +42,17 @@ program
   .option('--overdue', 'Show only overdue tasks')
   .action((options: ListOptions) => {
     listTasks(storage, options);
+  });
+
+program
+  .command('search <term>')
+  .description('Search tasks by text')
+  .option('-c, --completed', 'Show only completed tasks')
+  .option('-p, --pending', 'Show only pending tasks')
+  .option('--priority <priority>', 'Filter by priority (high, medium, low)')
+  .option('--overdue', 'Show only overdue tasks')
+  .action((term: string, options: ListOptions) => {
+    searchTasks(storage, term, options);
   });
 
 program
